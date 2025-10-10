@@ -68,6 +68,8 @@ DOMAIN-SUFFIX,x.ai
 
 DOMAIN-KEYWORD,alkalimakersuite-pa.clients6.google.com
 DOMAIN-KEYWORD,openai
+DOMAIN-KEYWORD,exhentai
+DOMAIN-KEYWORD,e-hentai
 
 IP-CIDR,24.199.123.28/32
 IP-CIDR,64.23.132.171/32
