@@ -1,4 +1,4 @@
-
+/*
 传入参数：
 
 loadbalance: 启用负载均衡 (默认false)
@@ -328,7 +328,7 @@ function parseBool(value) {
 function hasLowCost(config) {
   // 检查是否有低倍率节点
   const proxies = config["proxies"] || [];
-  const lowCostRegex = new RegExp(/0\.[0-5]|低倍率|省流|大流量|实验性/, 'i');
+  const lowCostRegex = /0\.[0-5]|低倍率|省流|大流量|实验性/i;
   for (const proxy of proxies) {
     if (lowCostRegex.test(proxy.name || "")) return true;
   }
@@ -441,8 +441,7 @@ function buildProxyGroups({
       "name": "落地节点",
       "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Airport.png",
       "type": "select",
-      "include-all": true,
-      "filter": "(?i)家宽|家庭|家庭宽带|商宽|商业宽带|星链|Starlink|落地"
+      "include-all": true
     } : null,
     {
       "name": "故障转移",
@@ -539,18 +538,16 @@ function buildProxyGroups({
       "type": "select",
       "proxies": defaultProxies
     },
-    // === Emby 策略组：全节点分流（include-all），同时保留前置偏好顺序 ===
+    // === Emby 策略组：允许在所有节点之间选择 ===
     {
       "name": "Emby",
       "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Emby.png",
       "type": "select",
-      "include-all": true,
-      "proxies": defaultProxiesDirect
-      // 如需完全不设优先级，可去掉 proxies 字段
+      "include-all": true
     },
     {
       "name": "搜狗输入法",
-      "icon": "https://cdn.jsdelivr.net/gh/powerfullz/override-rules@master/icons/Sougou.png",
+      "icon": "https://cdn.jsdelivr.net/gh/powerfullz/override-rules@master/icons/Sogou.png",
       "type": "select",
       "proxies": ["直连", "REJECT"]
     },
@@ -587,7 +584,8 @@ function buildProxyGroups({
 }
 
 // ---------------- 入口：覆盖配置 ----------------
-function main(config = {}) {
+function main(config = {}, options = {}) {
+  const { fakeIP = fakeIPEnabled } = options;
   const lowCost = hasLowCost(config);
   const countryInfo = parseCountries(config); // [{country, count}]
   const { defaultProxies, defaultProxiesDirect, defaultSelector, defaultFallback } =
@@ -611,4 +609,46 @@ function main(config = {}) {
   config["tcp-keep-alive"] = keepAliveEnabled;
   if (fullConfig) {
     config["unified-delay"] = true;
-    config["tcp-concurrent"] =
+    config["tcp-concurrent"] = true;
+  }
+
+  config["proxy-groups"] = finalProxyGroups.map(group => ({ ...group }));
+
+  const selectedDnsConfig = fakeIP ? dnsConfig2 : dnsConfig;
+  config["dns"] = JSON.parse(JSON.stringify(selectedDnsConfig));
+
+  config["sniffer"] = { ...snifferConfig };
+  config["geox-url"] = { ...geoxURL };
+
+  const existingRuleProviders = config["rule-providers"] || {};
+  config["rule-providers"] = { ...existingRuleProviders, ...ruleProviders };
+
+  const existingRules = Array.isArray(config["rules"]) ? config["rules"] : [];
+  const mergedRules = [...rules];
+  for (const rule of existingRules) {
+    if (!mergedRules.includes(rule)) {
+      mergedRules.push(rule);
+    }
+  }
+  config["rules"] = mergedRules;
+
+  return config;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    parseBool,
+    hasLowCost,
+    parseCountries,
+    buildBaseLists,
+    buildCountryProxyGroups,
+    buildProxyGroups,
+    main,
+    dnsConfig,
+    dnsConfig2,
+    geoxURL,
+    snifferConfig,
+    ruleProviders,
+    rules
+  };
+}
